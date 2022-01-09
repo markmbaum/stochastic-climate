@@ -8,6 +8,7 @@ DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 

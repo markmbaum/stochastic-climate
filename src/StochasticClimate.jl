@@ -92,7 +92,7 @@ function initparams(;
     𝒻χ=Χ(), #equilibrium fCO2 as a function of time
     τ=1e-2, #weathering feedback time scale
     g=1e3, #noise strength
-    dt=1e-4, #time step
+    dt=1e-3, #time step
     t₁=2.5, #initial time
     t₂=4.5) #final time
     (
