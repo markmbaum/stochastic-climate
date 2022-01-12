@@ -64,7 +64,7 @@ struct Χ{𝒯<:ChebyshevInterpolator} #capital Chi here
     interpolator::𝒯
 end
 
-Χ(Tₑ::Real=T₀; N::Int=8) = Χ(ChebyshevInterpolator(t -> log(𝒻fCO2ₑ(t,Float64(Tₑ))), 0.0, 𝐭, N))
+Χ(Tₑ::Real=T₀; N::Int=5) = Χ(ChebyshevInterpolator(t -> log(𝒻fCO2ₑ(t,Float64(Tₑ))), 0.0, 𝐭, N))
 
 (χ::Χ)(t) = exp(χ.interpolator(t))
 
@@ -80,8 +80,6 @@ g(u, p, t) = p.g
 function 𝒹fCO2(fCO2, p, t)
     #unpack parameters
     @unpack 𝒻χ, τ = p
-    #instantaneous temperature
-    #T = 𝒻T(t, fCO2)
     #equilibrium 𝒻CO2
     χ = 𝒻χ(t)
     #change in fCO2
@@ -89,19 +87,31 @@ function 𝒹fCO2(fCO2, p, t)
 end
 
 function initparams(;
-    𝒻χ=Χ(), #equilibrium fCO2 as a function of time
-    τ=1e-2, #weathering feedback time scale
-    g=1e3, #noise strength
-    dt=1e-3, #time step
-    t₁=2.5, #initial time
-    t₂=4.5) #final time
+                    Tₑ=288.0, #equilibrium temperature
+                    τ=1e-2, #weathering feedback time scale
+                    g=1e3, #noise strength
+                    dt=1e-1, #time step
+                    t₁=2.5, #initial time
+                    t₂=4.5, #final time
+                    enforcepos=true #whether to include callback preventing negative fCO₂
+                    )::NamedTuple
+    #named tuple containing integration parameters
     (
-        𝒻χ = 𝒻χ,
+        𝒻χ = Χ(Tₑ),
         τ  = Float64(τ),
         g  = Float64(g),
         dt = Float64(dt),
         t₁ = Float64(t₁),
-        t₂ = Float64(t₂)
+        t₂ = Float64(t₂),
+        enforcepos = enforcepos
+    )
+end
+
+function enforcepositivity()::DiscreteCallback
+    DiscreteCallback(
+        (u, t, integrator) -> u < 0,
+        integrator -> integrator.u = -integrator.u,
+        save_positions=(true,true)
     )
 end
 
@@ -109,8 +119,16 @@ function integrate(params=initparams())
     @unpack t₁, t₂, 𝒻χ, dt = params
     tspan = (t₁, t₂)
     u₀ = 𝒻χ(t₁)
-    prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params)
-    sol = solve(prob, EM(), dt=dt)
+    #prevent negative fCO₂ or don't
+    if params.enforcepos
+        println("yes")
+        prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params, callback=enforcepositivity())
+    else
+        prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params)
+    end
+    sol = solve(prob, SRA3(), dt=dt)
+    println(length(sol.t))
+    println(minimum(sol.u))
     return sol.t, sol.u, 𝒻Tsafe.(sol.t, sol.u)
 end
 

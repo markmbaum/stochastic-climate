@@ -10,9 +10,10 @@ pygui(true)
 ##
 
 params = initparams(
-    t₁=4.0, #starting time [Gya]
+    t₁=2.0, #starting time [Gya]
     g=1e4, #magnitude of noise
-    τ=2.5e-3 #strength of "weathering" feedback (smaller is stronger feedback) [Gyr]
+    τ=2.5e-3, #strength of "weathering" feedback (smaller is stronger feedback) [Gyr]
+    enforcepos=true
 )
 
 ## show a single integration
@@ -40,12 +41,12 @@ fig[:tight_layout]()
 
 N = 100*nthreads()
 println("$N ensemble members")
-Tall = Vector{Vector{Float64}}(undef, N)
+Tₐ = Vector{Vector{Float64}}(undef, N)
 @threads for i ∈ 1:N
-    Tall[i] = integrate(params)[3]
+    Tₐ[i] = integrate(params)[3]
 end
-Tcat = vcat(Tall...)
-T = filter(x->!isnan(x), Tcat)
+Tc = vcat(Tₐ...)
+T = filter(x->!isnan(x), Tc)
 
 c = 100*round(count(x->!isnan(x) & (x < 280), Tcat)/length(Tcat), sigdigits=3)
 println("$c % of time in snowball regime")
@@ -54,4 +55,5 @@ fig = figure()
 hist(T, density=true, log=true, color="gray")
 xlabel("Temperature (excluding NaNs) [K]")
 ylabel("Density")
+title("$c % of time in snowball regime (<280 K)")
 fig[:tight_layout]()
