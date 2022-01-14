@@ -11,9 +11,9 @@ pygui(true)
 
 params = initparams(
     t₁=2.0, #starting time [Gya]
-    g=1e4, #magnitude of noise
+    g=4e3, #magnitude of noise
     τ=2.5e-3, #strength of "weathering" feedback (smaller is stronger feedback) [Gyr]
-    enforcepos=true
+    reflect=true
 )
 
 ## show a single integration

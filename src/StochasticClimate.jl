@@ -93,7 +93,7 @@ function initparams(;
                     dt=1e-1, #time step
                     t₁=2.5, #initial time
                     t₂=4.5, #final time
-                    enforcepos=true #whether to include callback preventing negative fCO₂
+                    reflect=true #whether to include callback preventing negative fCO₂
                     )::NamedTuple
     #named tuple containing integration parameters
     (
@@ -103,18 +103,18 @@ function initparams(;
         dt = Float64(dt),
         t₁ = Float64(t₁),
         t₂ = Float64(t₂),
-        enforcepos = enforcepos
+        reflect = reflect
     )
 end
 
-function flipu!(integrator)
-    # if integrated u negative, flip sign of u
+function reflect!(integrator)::Nothing
     if integrator.u < 0
         integrator.u = -integrator.u
     end
+    nothing
 end
 
-function enforcepositivity()::DiscreteCallback
+function reflector()::DiscreteCallback
     # for whatever reason save_positions=(false,true) doesn't
     # accomplish not saving pre-flipped negative CO2
     # so follow Chris Rackauckas' answer here
@@ -122,29 +122,24 @@ function enforcepositivity()::DiscreteCallback
     # also requires setting save_everystep=false in solve
     DiscreteCallback(
         (u,t,integrator) -> true,
-        flipu!,
+        reflect!,
         save_positions=(false,true)
     )
 end
-
 
 function integrate(params=initparams())
     @unpack t₁, t₂, 𝒻χ, dt = params
     tspan = (t₁, t₂)
     u₀ = 𝒻χ(t₁)
-
     prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params)
     #prevent negative fCO₂ or don't
-    if params.enforcepos
-        println("don't allow negative fCO₂")
-        sol = solve(prob, SRA3(), dt=dt,callback=enforcepositivity(),save_everystep=false)
+    if params.reflect
+        sol = solve(prob, SRA3(), dt=dt, callback=reflector(), save_everystep=false)
+        return sol.t, sol.u, 𝒻T.(sol.t, sol.u)
     else
         sol = solve(prob, SRA3(), dt=dt)
+        return sol.t, sol.u, 𝒻Tsafe.(sol.t, sol.u)
     end
-    println(length(sol.t))
-    println("minimum fCO₂ = $(minimum(sol.u))")
-    println("fraction negative fCO₂ = $(size(sol.u[sol.u .< 0])[1]/size(sol.u)[1])")
-    return sol.t, sol.u, 𝒻Tsafe.(sol.t, sol.u)
 end
 
 end
