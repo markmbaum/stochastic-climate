@@ -107,28 +107,43 @@ function initparams(;
     )
 end
 
+function flipu!(integrator)
+    # if integrated u negative, flip sign of u
+    if integrator.u < 0
+        integrator.u = -integrator.u
+    end
+end
+
 function enforcepositivity()::DiscreteCallback
+    # for whatever reason save_positions=(false,true) doesn't
+    # accomplish not saving pre-flipped negative CO2
+    # so follow Chris Rackauckas' answer here
+    # https://stackoverflow.com/questions/69049991/simulating-a-reflecting-boundary-sdeproblem
+    # also requires setting save_everystep=false in solve
     DiscreteCallback(
-        (u, t, integrator) -> u < 0,
-        integrator -> integrator.u = -integrator.u,
-        save_positions=(true,true)
+        (u,t,integrator) -> true,
+        flipu!,
+        save_positions=(false,true)
     )
 end
+
 
 function integrate(params=initparams())
     @unpack t₁, t₂, 𝒻χ, dt = params
     tspan = (t₁, t₂)
     u₀ = 𝒻χ(t₁)
+
+    prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params)
     #prevent negative fCO₂ or don't
     if params.enforcepos
-        println("yes")
-        prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params, callback=enforcepositivity())
+        println("don't allow negative fCO₂")
+        sol = solve(prob, SRA3(), dt=dt,callback=enforcepositivity(),save_everystep=false)
     else
-        prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params)
+        sol = solve(prob, SRA3(), dt=dt)
     end
-    sol = solve(prob, SRA3(), dt=dt)
     println(length(sol.t))
-    println(minimum(sol.u))
+    println("minimum fCO₂ = $(minimum(sol.u))")
+    println("fraction negative fCO₂ = $(size(sol.u[sol.u .< 0])[1]/size(sol.u)[1])")
     return sol.t, sol.u, 𝒻Tsafe.(sol.t, sol.u)
 end
 
