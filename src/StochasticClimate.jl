@@ -86,11 +86,20 @@ function 𝒹fCO2(fCO2, p, t)
     -(fCO2 - χ)/τ
 end
 
+function 𝒹fCO2(fCO2, p, t, W)
+    #unpack parameters
+    @unpack 𝒻χ, τ = p
+    #equilibrium 𝒻CO2
+    χ = 𝒻χ(t)
+    #change in fCO2
+    -(fCO2 - χ)/τ + 1000000*abs(W)
+end
+
 function initparams(;
                     Tₑ=288.0, #equilibrium temperature
                     τ=1e-2, #weathering feedback time scale
                     g=1e3, #noise strength
-                    dt=1e-1, #time step
+                    dt=1e-5, #time step
                     t₁=2.5, #initial time
                     t₂=4.5, #final time
                     enforcepos=true #whether to include callback preventing negative fCO₂
@@ -119,16 +128,9 @@ function integrate(params=initparams())
     @unpack t₁, t₂, 𝒻χ, dt = params
     tspan = (t₁, t₂)
     u₀ = 𝒻χ(t₁)
-    #prevent negative fCO₂ or don't
-    if params.enforcepos
-        println("yes")
-        prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params, callback=enforcepositivity())
-    else
-        prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params)
-    end
-    sol = solve(prob, SRA3(), dt=dt)
-    println(length(sol.t))
-    println(minimum(sol.u))
+    prob = RODEProblem(𝒹fCO2, u₀, tspan, params)
+    println(dt)
+    sol = solve(prob, RandomEM(), dt=dt)
     return sol.t, sol.u, 𝒻Tsafe.(sol.t, sol.u)
 end
 

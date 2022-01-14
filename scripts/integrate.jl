@@ -48,7 +48,7 @@ end
 Tc = vcat(Tₐ...)
 T = filter(x->!isnan(x), Tc)
 
-c = 100*round(count(x->!isnan(x) & (x < 280), Tcat)/length(Tcat), sigdigits=3)
+c = 100*round(count(x->!isnan(x) & (x < 280), Tc)/length(Tc), sigdigits=3)
 println("$c % of time in snowball regime")
 
 fig = figure()
