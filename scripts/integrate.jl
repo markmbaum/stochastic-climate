@@ -11,9 +11,9 @@ pygui(true)
 
 params = initparams(
     t₁=2.0, #starting time [Gya]
-    g=1e4, #magnitude of noise
+    g=4e3, #magnitude of noise
     τ=2.5e-3, #strength of "weathering" feedback (smaller is stronger feedback) [Gyr]
-    enforcepos=true
+    reflect=true
 )
 
 ## show a single integration
@@ -50,6 +50,7 @@ T = filter(x->!isnan(x), Tc)
 
 c = 100*round(count(x->!isnan(x) & (x < 280), Tc)/length(Tc), sigdigits=3)
 println("$c % of time in snowball regime")
+println("$(size(Tc)[1]-size(T)[1]) NaN Ts in ensemble")
 
 fig = figure()
 hist(T, density=true, log=true, color="gray")
