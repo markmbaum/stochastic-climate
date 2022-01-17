@@ -86,15 +86,6 @@ function 𝒹fCO2(fCO2, p, t)
     -(fCO2 - χ)/τ
 end
 
-function 𝒹fCO2(fCO2, p, t, W)
-    #unpack parameters
-    @unpack 𝒻χ, τ = p
-    #equilibrium 𝒻CO2
-    χ = 𝒻χ(t)
-    #change in fCO2
-    -(fCO2 - χ)/τ + 1000000*abs(W)
-end
-
 function initparams(;
                     Tₑ=288.0, #equilibrium temperature
                     τ=1e-2, #weathering feedback time scale

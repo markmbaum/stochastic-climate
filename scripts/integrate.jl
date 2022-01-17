@@ -11,7 +11,7 @@ pygui(true)
 
 params = initparams(
     t₁=2.0, #starting time [Gya]
-    g=4e3, #magnitude of noise
+    g=3e3, #magnitude of noise
     τ=2.5e-3, #strength of "weathering" feedback (smaller is stronger feedback) [Gyr]
     reflect=true
 )
@@ -39,7 +39,7 @@ fig[:tight_layout]()
 
 ## temperature statistics for an ensemble of integrations
 
-N = 100*nthreads()
+N = 500*nthreads()
 println("$N ensemble members")
 Tₐ = Vector{Vector{Float64}}(undef, N)
 @threads for i ∈ 1:N
