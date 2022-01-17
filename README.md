@@ -4,7 +4,7 @@ This code base is using the Julia Language and [DrWatson](https://juliadynamics.
 to make a reproducible scientific project named
 > Stochastic Climate
 
-It is authored by Mark Baum <markmbaum@protonmail.com>.
+It is authored by Mark Baum <markmbaum@protonmail.com> and Kaitlyn Loftus <kloftus@g.harvard.edu>.
 
 To (locally) reproduce this project, do the following:
 
