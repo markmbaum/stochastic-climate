@@ -30,7 +30,7 @@ const 𝐭 = 4.5
 #------------------------------------------------------------------------------
 #component physical equations
 
-export 𝒻α, 𝒻F, 𝒻S, 𝒻OLR, 𝒻A, 𝒻T, 𝒻Tsafe, imbalance
+export 𝒻α, 𝒻F, 𝒻S, 𝒻OLR, 𝒻T, 𝒻Tsafe, imbalance
 
 #stellar luminosity fraction over time [Gya]
 𝒻α(t) = 1/(1 + (2/5)*(1 - t/𝐭))
