@@ -1,5 +1,5 @@
 name = "Stochastic Climate"
-authors = ["Mark Baum <markmbaum@protonmail.com>"]
+authors = ["Mark Baum <markmbaum@protonmail.com>", "Kaitlyn Loftus <kloftus@g.harvard.edu>"]
 
 [deps]
 BasicInterpolators = "26cce99e-4866-4b6d-ab74-862489e035e0"
