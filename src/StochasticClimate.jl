@@ -8,18 +8,18 @@ using StochasticDiffEq
 #------------------------------------------------------------------------------
 # physical constants
 
-export F₀, fCO2₀, T₀, A₀, OLR₀, 𝐭
+export Fᵣ, fCO2ᵣ, Tᵣ, αᵣ, OLRᵣ, 𝐭
 
 #reference instellation (solar "constant") [W/m^2]
-const F₀ = 1366.0
+const Fᵣ = 1366.0
 #reference molar concentration of CO2 [ppm]
-const fCO2₀ = 280
+const fCO2ᵣ = 280
 #reference temperature [K]
-const T₀ = 288.0
+const Tᵣ = 288.0
 #reference albedo [-]
-const A₀ = 0.3
+const αᵣ = 0.3
 #reference OLR [W/m^2]
-const OLR₀ = (1 - A₀)*F₀/4
+const OLRᵣ = (1 - αᵣ)*Fᵣ/4
 #OLR response to temperature
 const a = 2.0
 #OLR response to pCO2
@@ -33,38 +33,38 @@ const 𝐭 = 4.5
 export 𝒻α, 𝒻F, 𝒻S, 𝒻OLR, 𝒻T, 𝒻Tsafe, imbalance
 
 #stellar luminosity fraction over time [Gya]
-𝒻α(t) = 1/(1 + (2/5)*(1 - t/𝐭))
+𝒻α(t=𝐭) = 1/(1 + (2/5)*(1 - t/𝐭))
 
 #instellation over time [W/m^2]
-𝒻F(t) = 𝒻α(t)*F₀
+𝒻F(t=𝐭) = 𝒻α(t)*Fᵣ
 
 #absorbed radiation [W/m^2]
-𝒻S(t, A) = (1 - A)*𝒻F(t)/4
+𝒻S(t=𝐭, α=αᵣ) = (1 - α)*𝒻F(t)/4
 
 #outgoing longwave radiation [W/m^2]
-𝒻OLR(T, fCO2) = OLR₀ + a*(T - T₀) - b*log(fCO2/fCO2₀)
+𝒻OLR(T=Tᵣ, fCO2=fCO2₀) = OLRᵣ + a*(T - Tᵣ) - b*log(fCO2/fCO2ᵣ)
 
 #instantaneous temperature [K]
-𝒻T(t, fCO2) = (𝒻S(t, A₀) - OLR₀ + b*log(fCO2/fCO2₀))/a + T₀
-𝒻Tsafe(t, fCO2) = fCO2 <= 0 ? NaN : 𝒻T(t, fCO2)
+𝒻T(t=𝐭, fCO2=fCO2₀) = (𝒻S(t, αᵣ) - OLRᵣ + b*log(fCO2/fCO2ᵣ))/a + Tᵣ
+𝒻Tsafe(t=𝐭, fCO2=fCO2₀) = fCO2 <= 0 ? NaN : 𝒻T(t, fCO2)
 
 #radiative imbalance [W/m^2]
-imbalance(t, T, fCO2) = 𝒻S(t, A₀) - 𝒻OLR(T, fCO2)
+imbalance(t=𝐭, T=Tᵣ, fCO2=fCO2₀) = 𝒻S(t, αᵣ) - 𝒻OLR(T, fCO2)
 
 #------------------------------------------------------------------------------
 # equilibrium fCO2 over time
 
 export 𝒻fCO2ₑ, Χ, tsat
 
-#find the fCO2 value which gives T₀ at some time
-𝒻fCO2ₑ(t, Tₑ=T₀) = exp10(find_zero(x -> imbalance(t, Tₑ, exp10(x)), (-12, 12)))
+#find the fCO2 value which gives Tᵣ at some time
+𝒻fCO2ₑ(t, Tₑ=Tᵣ) = exp10(find_zero(x -> imbalance(t, Tₑ, exp10(x)), (-12, 12)))
 
 #simple struct to rapidly interpolate χ values instead of root finding
 struct Χ{𝒯<:ChebyshevInterpolator} #capital Chi here
     interpolator::𝒯
 end
 
-Χ(Tₑ::Real=T₀; N::Int=5) = Χ(ChebyshevInterpolator(t -> log(𝒻fCO2ₑ(t,Float64(Tₑ))), 0.0, 𝐭, N))
+Χ(Tₑ::Real=Tᵣ; N::Int=5) = Χ(ChebyshevInterpolator(t -> log(𝒻fCO2ₑ(t,Float64(Tₑ))), 0.0, 𝐭, N))
 
 (χ::Χ)(t) = exp(χ.interpolator(t))
 
@@ -73,7 +73,7 @@ tsat(χ::Χ) = find_zero(t -> χ(t) - 1e6, (0.0, 𝐭))
 #------------------------------------------------------------------------------
 # setup & integration
 
-export initparams, integrate
+export initparams, simulate, integrate
 
 g(u, p, t) = p.g
 
@@ -89,8 +89,8 @@ end
 function initparams(;
                     Tₑ=288.0, #equilibrium temperature
                     τ=1e-2, #weathering feedback time scale
-                    g=1e3, #noise strength
-                    dt=1e-5, #time step
+                    g=1e2, #noise strength
+                    dt=1e-4, #time step
                     t₁=2.5, #initial time
                     t₂=4.5, #final time
                     reflect=true #whether to include callback preventing negative fCO₂
@@ -127,19 +127,23 @@ function reflector()::DiscreteCallback
     )
 end
 
-function integrate(params=initparams())
+function simulate(params)
     @unpack t₁, t₂, 𝒻χ, dt = params
     tspan = (t₁, t₂)
     u₀ = 𝒻χ(t₁)
     prob = SDEProblem(𝒹fCO2, g, u₀, tspan, params)
-    #prevent negative fCO₂ or don't
-    if params.reflect
-        sol = solve(prob, SRA3(), dt=dt, callback=reflector(), save_everystep=false)
-        return sol.t, sol.u, 𝒻T.(sol.t, sol.u)
+    sol = if params.reflect
+        solve(
+            prob,
+            EM(),
+            dt=dt,
+            callback=reflector(),
+            save_everystep=false
+        )
     else
-        sol = solve(prob, SRA3(), dt=dt)
-        return sol.t, sol.u, 𝒻Tsafe.(sol.t, sol.u)
+        solve(prob, EM(), dt=dt)
     end
+    return sol.t, sol.u, 𝒻Tsafe.(sol.t, sol.u)
 end
 
 end
